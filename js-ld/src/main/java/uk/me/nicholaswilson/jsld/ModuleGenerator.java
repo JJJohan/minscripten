@@ -90,7 +90,8 @@ class ModuleGenerator {
     ModuleUtil.appendFragment(
       scriptStatements,
       "const " + EXPORTS_VAR + " = {};" +
-        "const " + SYMBOLS_VAR + " = {};"
+        "const " + SYMBOLS_VAR + " = {};"+
+        "const __symbols_wasi={};"
     );
 
     // Hah, this needs some explanation!  Modules in general have circular
@@ -255,14 +256,14 @@ class ModuleGenerator {
       instantiationStatements,
       "if(WebAssembly.instantiateStreaming)" +
       "{" +
-      "    return WebAssembly.instantiateStreaming(" + FETCHER_VAR + "(\"" + wasmFileName + "\"),{env:" + SYMBOLS_VAR + "});" +
+      "    return WebAssembly.instantiateStreaming(" + FETCHER_VAR + "(\"" + wasmFileName + "\"),{env:" + SYMBOLS_VAR + ",wasi_snapshot_preview1: __symbols_wasi});" +
       "}" +
       "else" +
       "{" +
       "    return " + FETCHER_VAR + "(\"" + wasmFileName + "\").then(function(bytes)" +
       "    {" +
       "        return WebAssembly.compile(bytes);" +
-      "    }).then(function(wasmModule){return WebAssembly.instantiate(wasmModule, { env:" + SYMBOLS_VAR + "})});" +
+      "    }).then(function(wasmModule){return WebAssembly.instantiate(wasmModule, { env:" + SYMBOLS_VAR  + ",wasi_snapshot_preview1:__symbols_wasi })});" +
       "}");
 
     return new FunctionExpression(
