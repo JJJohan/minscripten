@@ -167,6 +167,8 @@ class ModuleGenerator {
         "    if (wasmEx !== undefined)" +
         "      throw new Error('WebAssembly previously threw: ' + wasmEx);" +
         "    try { return fn(...args); } catch (e) {" +
+        "      if (typeof wasmErrorCallback === 'function')" +
+        "        wasmErrorCallback(e);" +
         "      wasmEx = e; throw e;" +
         "    }" +
         "  }" +
