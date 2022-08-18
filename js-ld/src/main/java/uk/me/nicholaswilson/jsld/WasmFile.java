@@ -78,8 +78,9 @@ class WasmFile {
         byte sectionId = buffer.get();
         int sectionLen = getUleb32(buffer);
         if (sectionId != CUSTOM_SECTION_ID) {
-          if (sectionId < lastSectionId)
-            throw new LdException("Invalid Wasm file: out of order section");
+          // JR: Removed check as out of order sections are valid after wasm-opt executions.
+          //if (sectionId < lastSectionId)
+          //  throw new LdException("Invalid Wasm file: out of order section");
           lastSectionId = sectionId;
         }
         ByteBuffer sectionBuffer = (ByteBuffer)buffer.slice().limit(sectionLen);
