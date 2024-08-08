@@ -374,6 +374,9 @@ function path_open(dirfd, dirflags, path, path_len, oflags, fs_rights_base, fs_r
   return WASI_ENOSYS;
 }
 
+function random_get(buf, buf_len) {
+  return WASI_ENOSYS;
+}
 
 function clock_time_get(clockId, precision, ts) {
   let now;
@@ -433,7 +436,7 @@ __symbols_wasi["fd_read"] = fd_read;
 __symbols_wasi["fd_seek"] = fd_seek;
 __symbols_wasi["path_open"] = path_open;
 __symbols_wasi["proc_exit"] = proc_exit;
-
+__symbols_wasi["random_get"] = random_get;
 
 //
 
