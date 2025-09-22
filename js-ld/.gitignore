@@ -1,2 +1,3 @@
-target
+target/*
 dependency-reduced-pom.xml
+!target/js-ld-1.0-SNAPSHOT.jar
