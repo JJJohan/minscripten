@@ -180,7 +180,7 @@ function writeU32(address, value) {
   address = address >>> 0;
   value = value >>> 0;
   const u32 = memory.getU32();
-  if ((address & 0x3) !== 0 || (address >>= 2) >= u32.length)
+  if ((address & 0x3) !== 0 || (address >>>= 2) >= u32.length)
     return false;
   u32[address] = value;
   return true;
@@ -189,7 +189,7 @@ function writeS32(address, value) {
   address = address >>> 0;
   value = value | 0;
   const s32 = memory.getS32();
-  if ((address & 0x3) !== 0 || (address >>= 2) >= s32.length)
+  if ((address & 0x3) !== 0 || (address >>>= 2) >= s32.length)
     return false;
   s32[address] = value;
   return true;
@@ -253,14 +253,14 @@ const writeGidt = writeUint,
 function readU32(address) {
   address = address >>> 0;
   const u32 = memory.getU32();
-  if ((address & 0x3) !== 0 || (address >>= 2) >= u32.length)
+  if ((address & 0x3) !== 0 || (address >>>= 2) >= u32.length)
     return [0, false];
   return [u32[address], true];
 }
 function readS32(address) {
   address = address >>> 0;
   const s32 = memory.getS32();
-  if ((address & 0x3) !== 0 || (address >>= 2) >= s32.length)
+  if ((address & 0x3) !== 0 || (address >>>= 2) >= s32.length)
     return [0, false];
   return [s32[address], true];
 }
@@ -268,7 +268,7 @@ function readS32(address) {
 function readF32(address) {
   address = address >>> 0;
   const f32 = memory.getF32();
-  if ((address & 0x3) !== 0 || (address >>= 2) >= f32.length)
+  if ((address & 0x3) !== 0 || (address >>>= 2) >= f32.length)
     return [0, false];
   return [f32[address], true];
 }
@@ -390,30 +390,50 @@ function clock_time_get(clockId, precision, ts) {
 }
 //ssize_t writev (int, const struct iovec *, int);
 export function __syscall_writev(fd, iovec, nWritten) {
-  let piovec, niovec, result;
-  let buff = memory.getU8();
+  const HEAPU8 = memory.getU8();
+  const decoder = new TextDecoder('utf-8');
+  let totalBytes = 0;
+  let str = '';
 
-  let str = "";
-  let curr = iovec;
-  let bytes = 0;
-  for (let i = 0; i < nWritten; ++i) {
+  const iovecSize = 8; // 2 x 32-bit fields
 
-    [piovec, result] = readS32(curr);
-    curr += 4;
-    if (!result)
-      throw new Error("Unable to read iovec address");
+  for (let i = 0; i < nWritten; i++) {
+      const offset = iovec + i * iovecSize;
 
-    [niovec, result] = readS32(curr);
-    if (!result)
-      throw new Error("Unable to read iovec size");
-    curr += 4;
-    bytes += niovec;
-    str += buff.toString("utf8", piovec, piovec + niovec)
+      const ptr = HEAPU8[offset] | (HEAPU8[offset + 1] << 8) |
+                  (HEAPU8[offset + 2] << 16) | (HEAPU8[offset + 3] << 24);
+      const len = HEAPU8[offset + 4] | (HEAPU8[offset + 5] << 8) |
+                  (HEAPU8[offset + 6] << 16) | (HEAPU8[offset + 7] << 24);
+
+      // Clamp length
+      const safeLen = Math.max(0, Math.min(len, HEAPU8.length - ptr));
+      if (safeLen === 0) continue;
+
+      const slice = HEAPU8.subarray(ptr, ptr + safeLen);
+
+      // Trim trailing null bytes
+      let sliceEnd = slice.length;
+      while (sliceEnd > 0 && slice[sliceEnd - 1] === 0) sliceEnd--;
+
+      if (sliceEnd === 0) continue; // skip empty slice
+
+      str += decoder.decode(slice.subarray(0, sliceEnd));
+
+      totalBytes += safeLen;
   }
-  //__root.console.log("iovec size =" +niovec);
-  __root.console.log(str);
 
-  return bytes;
+  if (str.length > 0) {
+      if (fd === 1) console.log(str);
+      else if (fd === 2) {
+          console.error(str);
+          if (str.includes("Assertion failed")) {
+            // Special case: Prints the triggered assertion directly in any error callbacks rather than displaying the generic abort() message that occurs afterwards.
+            throw new Error(str);
+          }
+      }
+  }
+
+  return totalBytes;
 }
 
 
